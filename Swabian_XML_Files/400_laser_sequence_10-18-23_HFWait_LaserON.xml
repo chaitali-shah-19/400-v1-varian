@@ -1,0 +1,91 @@
+        <sequence>
+
+        <variables>
+            % these are the variables that can be scanned or switched from the GUI
+
+            d1=float(2,0,1000)
+            coil_position = float(330, 10, 1019)%NMR pos
+            velocity=float(10, 1, 2000)
+            accn=float(1, 1, 30000)
+            jerk=float(1, 1, 800000)
+            g_position=float(330, 10, 1000)%start position
+            %test_pulse=float(10, 1, 2000)
+            wait_time= float(10, 0, 2000)
+            nitro_fill=float(1,-200,1000)
+            
+            
+           sweep_freq=float(0.015,0,20000);
+           awg_center_freq=float(3.825e9,2e9,5e9);  %this doubles as center freq
+           %  awg_start_freq=float(3e9,2e9,5e9);
+           awg_bw_freq=float(212e6,1e3,1e9);   %this doubles bandwidth
+           %  awg_stop_freq=float(3e9,2e9,5e9); 
+           awg_amp=float(0.1,0,1.3);
+           
+           srs_freq=float(4e9,.5e9,5e9);
+           srs_amp=float(3,-18,6);
+           sweep_sigma = float(1,0.01,20);
+           symm = float(0,0,1);
+           laser_sequence = float(1,1,31);
+           
+           pw=float(-100,0,10000);
+           tacq=float(1,0,20000);
+           gain=float(-100000,1,10000);
+           PW2=float(-100,0,10000);
+           tof = float(-14304.3,-1e6,1e6);
+           sequence_type=float(0,0,10);
+           
+           T1delay_time=float(0,0,20000);
+           laser_delay_time=float(0,0,1000);
+           laser_on_time=float(0,0,1000);
+
+        </variables>
+
+        <shaped_pulses>
+
+        </shaped_pulses>
+
+        <instructions>
+            channel_vec=[1 1 1 1 1 1 1 0 0 1 1 1 1 1 1 1 1 1 1 0 0 0 0 1 0 0 0 0 1 1 1 1 1 0 0 0 1 0 1 0 1 0 0 0 0 0 1];
+            channel_vec(8:46)=0;
+            channel_vec(12)=1;
+            channel_vec(39)=1;
+            channel_vec(38)=1; 
+            channel_vec(24)=1; %turn on to include a delay time (HF or LF)
+            channel_vec(37)=0;
+            channel_vec(36)=1;
+            
+            
+            PSeq = enable_channels(PSeq, 1:47,channel_vec );
+            
+              
+            %------ AWG and SRS -------------
+           PSeq = set_awg_symm(PSeq,awg_center_freq,awg_bw_freq,awg_amp,sweep_freq,sweep_sigma,symm);
+           PSeq = set_srs(PSeq,srs_freq,srs_amp);
+                
+           PSeq = set_acs_position2(PSeq, g_position,velocity, accn,jerk,coil_position,wait_time);
+           PSeq = set_T1delaytime(PSeq, T1delay_time);
+
+
+           PSeq = set_nmr_parameters(PSeq,pw,PW2,tacq,tof,gain,sequence_type);
+           %PSeq = set_nmr_parameters(PSeq,pw,PW2,tacq,nc1T,tof,gain,sequence_type);
+           
+           PSeq = ttl_pulse(PSeq,2, 20e-3) %ACS
+           PSeq = ttl_pulse(PSeq,1,wait_time); % mw switch ch 1
+           PSeq = ttl_pulse(PSeq,3,wait_time,-wait_time,1); % laser
+           
+           PSeq = wait(PSeq,92);
+           PSeq = wait(PSeq,T1delay_time); %wait for spin diffusion @HF
+           PSeq = ttl_pulse(PSeq,4,0.1) %NMR trigger
+           PSeq = wait(PSeq,-0.1);
+           
+           %1
+           PSeq = ttl_pulse(PSeq,3,laser_on_time); % laser on second time
+           PSeq = wait(PSeq,laser_delay_time); %wait time before laser turns on again
+           
+         
+
+     
+</instructions>
+
+</sequence>
+  
